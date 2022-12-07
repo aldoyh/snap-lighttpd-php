@@ -16,11 +16,11 @@ server.modules = (
 )
 
 server.document-root        = "$SNAP_DATA/www/"
-server.upload-dirs          = ( "$SNAP_DATA/iotdevice-http/uploads" )
-server.errorlog             = "$SNAP_DATA/iotdevice-http/error.log"
-server.pid-file             = "$SNAP_DATA/iotdevice-http.pid"
+server.upload-dirs          = ( "$SNAP_DATA/lighttpd-php/uploads" )
+server.errorlog             = "$SNAP_DATA/lighttpd-php/error.log"
+server.pid-file             = "$SNAP_DATA/lighttpd-php.pid"
 server.port                 = 80
-webdav.sqlite-db-name       = "$SNAP_DATA/iotdevice-http/lighttpd.webdav_lock.db"
+webdav.sqlite-db-name       = "$SNAP_DATA/lighttpd-php/lighttpd.webdav_lock.db"
 index-file.names            = ( "index.php", ".index.html", "index.lighttpd.html" )
 url.access-deny             = ( "~", ".inc" )
 
@@ -83,9 +83,9 @@ fastcgi.server += ( ".php" =>
 EOF
 chmod 0600 $CONF
 
-[ -e $SNAP_DATA/iotdevice-http/compress ] || mkdir -p $SNAP_DATA/iotdevice-http/compress
-[ -e $SNAP_DATA/iotdevice-http/uploads ] || mkdir -p $SNAP_DATA/iotdevice-http/uploads
-# [ -e $SNAP_DATA/www ] || mkdir -p $SNAP_DATA/www
+[ -e $SNAP_DATA/lighttpd-php/compress ] || mkdir -p $SNAP_DATA/lighttpd-php/compress
+[ -e $SNAP_DATA/lighttpd-php/uploads ] || mkdir -p $SNAP_DATA/lighttpd-php/uploads
+[ -e $SNAP_DATA/www ] || mkdir -p $SNAP_DATA/www
 [ -e $SNAP_DATA/etc/lighttpd/conf-enabled ] || mkdir -p $SNAP_DATA/etc/lighttpd/conf-enabled
 [ -e $SNAP_DATA/run/lighttpd ] || mkdir -p $SNAP_DATA/run/lighttpd
 
