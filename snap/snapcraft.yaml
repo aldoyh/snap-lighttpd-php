@@ -18,6 +18,9 @@ apps:
     daemon: simple
     plugs: [network, network-bind]
     
+architectures:
+  - build-on: arm64
+  - build-on: amd64
 
 parts:
   lighttpd-php:
