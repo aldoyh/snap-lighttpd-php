@@ -1,43 +1,60 @@
-name: lighttpd-php # you probably want to 'snapcraft register <name>'
-base: core22 # the base snap is the execution environment for this snap
-version: '0.1' # just for humans, typically '1.2+git' or '1.3.2'
-summary: A simple IOT Demo web server for wrapper
+name: laravel-dev
+base: core24
+version: '1.0.3'
+summary: A development environment for Laravel applications
 description: |
-  Reboot of the lighttpd snap
+  This snap provides a lightweight web server (lighttpd) with PHP-FPM for developing and testing Laravel applications.
 
-grade: stable # must be 'stable' to release into candidate/stable channels
-confinement: strict # use 'strict' once you have the right plugs and slots
+grade: stable
+confinement: strict
 
 apps:
-  lighttpd-php:
-    command: run-lighttpd
+  lighttpd:
+    command: bin/run-lighttpd
     daemon: simple
-    plugs: [network, network-bind]
+    plugs: [network, network-bind, home]
+    interfaces: [ :network, :network-bind, :home, :configure ]
   php-fpm:
-    command: run-php-fpm
+    command: bin/run-php-fpm
     daemon: simple
     plugs: [network, network-bind]
-    
+    interfaces: [ :network, :network-bind ]
+
 architectures:
-  - build-on: arm64
   - build-on: amd64
+  - build-on: arm64
 
 parts:
-  lighttpd-php:
+  lighttpd:
     plugin: nil
     stage-packages:
-            - lighttpd
-            - spawn-fcgi
-            - php
-            - php-cgi
-            - php-fpm
+      - lighttpd
+      - php8.3-fpm
+      - php8.3-cli
+      - php8.3-common
+      - php8.3-mysql
+      - php8.3-gd
+      - php8.3-curl
+      - php8.3-mbstring
+      - php8.3-xml
+      - php8.3-tokenizer
+      - php8.3-bcmath
+      - php8.3-zip
+      - composer
     override-prime: |
       craftctl default
-      cp -vf $CRAFT_PRIME/usr/bin/php-cgi.default $CRAFT_PRIME/usr/bin/php-cgi
-  copy:
-    plugin: nil
-    source: .
-    override-build: |
-      cp -av run-lighttpd $CRAFT_PART_INSTALL
-      cp -av run-php-fpm $CRAFT_PART_INSTALL
-    after: [lighttpd-php]
+      mkdir -p $CRAFT_PRIME/run/php
+
+  copy-scripts:
+    plugin: dump
+    source: scripts/
+    organize:
+      run-lighttpd: bin/
+      run-php-fpm: bin/
+    after: [lighttpd]
+
+options:
+  lighttpd.port:
+    type: int
+    default: 80
+    description: The port lighttpd will listen on.
