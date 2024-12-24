@@ -1,92 +1,53 @@
-#! /bin/sh
+#!/bin/sh
 
-CONF=$SNAP_DATA/lighttpd.conf
-BIN=$SNAP/usr/sbin/lighttpd
-PORT=80
+CONF="$SNAP_DATA/lighttpd.conf"
+BIN="$SNAP/usr/sbin/lighttpd"
+SOCKET="/run/php/php8.3-fpm.sock"
+
+PORT=$(snap get laravel-dev lighttpd.port)
+
+if [ -z "$PORT" ]; then
+  PORT=80
+fi
 
 LC_ALL=C.UTF-8
 LANG=C.UTF-8
 
-cat << EOF >$CONF
+cat << EOF >"$CONF"
 server.modules = (
-	"mod_indexfile",
-	"mod_access",
-	"mod_alias",
- 	"mod_redirect",
+    "mod_access",
+    "mod_alias",
+    "mod_compress",
+    "mod_fastcgi",
+    "mod_indexfile",
+    "mod_staticfile",
+    "mod_rewrite"
 )
 
-server.document-root        = "$SNAP_DATA/www/"
-server.upload-dirs          = ( "$SNAP_DATA/lighttpd-php/uploads" )
-server.errorlog             = "$SNAP_DATA/lighttpd-php/error.log"
-server.pid-file             = "$SNAP_DATA/lighttpd-php.pid"
-server.port                 = 80
-webdav.sqlite-db-name       = "$SNAP_DATA/lighttpd-php/lighttpd.webdav_lock.db"
-index-file.names            = ( "index.php", "index.html", "index.lighttpd.html" )
-url.access-deny             = ( "~", ".inc" )
+server.document-root = "$SNAP_DATA/www"
+server.errorlog = "$SNAP_DATA/lighttpd-error.log"
+server.pid-file = "$SNAP_DATA/lighttpd.pid"
+server.port = $PORT
 
+index-file.names = ( "index.php", "index.html" )
 
-# features
-#https://redmine.lighttpd.net/projects/lighttpd/wiki/Server_feature-flagsDetails
-server.feature-flags       += ("server.h2proto" => "enable")
-server.feature-flags       += ("server.h2c"     => "enable")
-server.feature-flags       += ("server.graceful-shutdown-timeout" => 5)
-#server.feature-flags       += ("server.graceful-restart-bg" => "enable")
-
-# strict parsing and normalization of URL for consistency and security
-# https://redmine.lighttpd.net/projects/lighttpd/wiki/Server_http-parseoptsDetails
-# (might need to explicitly set "url-path-2f-decode" = "disable"
-#  if a specific application is encoding URLs inside url-path)
-server.http-parseopts = (
-  "header-strict"           => "enable",# default
-  "host-strict"             => "enable",# default
-  "host-normalize"          => "enable",# default
-  "url-normalize-unreserved"=> "enable",# recommended highly
-  "url-normalize-required"  => "enable",# recommended
-  "url-ctrls-reject"        => "enable",# recommended
-  "url-path-2f-decode"      => "enable",# recommended highly (unless breaks app)
-  "url-path-dotseg-remove"  => "enable",# recommended highly (unless breaks app)
+fastcgi.server = ( ".php" =>
+    (
+        (
+            "socket" => "$SOCKET",
+            "bin-path" => "",
+            "check-local" => "disable",
+        )
+    )
 )
 
-static-file.exclude-extensions = ( ".php", ".pl", ".fcgi" )
-
-# default listening port for IPv6 falls back to the IPv4 port
-#include_shell "$SNAP/usr/share/lighttpd/use-ipv6.pl " + server.port
-include_shell "$SNAP/usr/share/lighttpd/create-mime.conf.pl"
-include "/$SNAP_DATA/etc/lighttpd/conf-enabled/*.conf"
-
-server.modules += (
-	"mod_dirlisting",
-	"mod_staticfile",
-)
-
-server.modules += ( "mod_fastcgi" )
-
-## Start an FastCGI server for php (needs the php-cgi package)
-fastcgi.server += ( ".php" =>
-	((
-#		"bin-path" => "$SNAP/usr/bin/php-cgi",
-#		"socket" => "$SNAP_DATA/run/lighttpd/php.socket",
-		"host" => "127.0.0.1",
-		"port" => "9001",
-		"max-procs" => 1,
-		"bin-environment" => (
-			"PHP_FCGI_CHILDREN" => "4",
-			"PHP_FCGI_MAX_REQUESTS" => "10000"
-		),
-		"bin-copy-environment" => (
-			"PATH", "SHELL", "USER"
-		),
-		"broken-scriptfilename" => "enable"
-	))
+url.rewrite-if-not-file = (
+    "^/(?!index\.php|css|images|js|robots\.txt|favicon\.ico)(.*)$" => "/index.php/$1"
 )
 
 EOF
-chmod 0600 $CONF
 
-[ -e $SNAP_DATA/lighttpd-php/compress ] || mkdir -p $SNAP_DATA/lighttpd-php/compress
-[ -e $SNAP_DATA/lighttpd-php/uploads ] || mkdir -p $SNAP_DATA/lighttpd-php/uploads
-[ -e $SNAP_DATA/www ] || mkdir -p $SNAP_DATA/www
-[ -e $SNAP_DATA/etc/lighttpd/conf-enabled ] || mkdir -p $SNAP_DATA/etc/lighttpd/conf-enabled
-[ -e $SNAP_DATA/run/lighttpd ] || mkdir -p $SNAP_DATA/run/lighttpd
+mkdir -p "$SNAP_DATA/www"
+chmod 0600 "$CONF"
 
-$BIN -D -f $CONF -m /$SNAP/usr/lib/lighttpd
+exec "$BIN" -D -f "$CONF"
